@@ -4,6 +4,7 @@ import hashlib
 import os
 import socket
 import threading
+import pathlib
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -36,6 +37,8 @@ def packageIsOk(chunck, hash):
     return True
 
 def send_file(archive_name, receiver):
+    cwd = str(pathlib.Path().resolve())
+    archive_name = cwd + "/" + PASTA_SHARED + "/" + archive_name
     if not os.path.exists(archive_name):
         print(f"[ERROR] File '{archive_name}' does not exist.")
         return

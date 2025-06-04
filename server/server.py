@@ -4,6 +4,7 @@ import socket
 import json
 import base64
 import hashlib
+import pathlib
 from dotenv import load_dotenv
 
 load_dotenv()
