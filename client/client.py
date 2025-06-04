@@ -46,7 +46,7 @@ def send_file(archive_name, receiver):
     # Split the file into chunks
     chunk_size = TAMANHO_BUFFER
     chunks = [file_content[i:i + chunk_size] for i in range(0, len(file_content), chunk_size)]
-    
+
     msg = f"[SEND] {client_id} {archive_name} TO {receiver} {len(chunks)}\n"
     msg.encode(TEXT_FORMAT)
     msg_lenght = len(msg)
@@ -70,7 +70,7 @@ def send_file(archive_name, receiver):
         client.send(package_json.encode(TEXT_FORMAT))
         print(f"[INFO] Sending chunk {i} to {receiver}.")
     
-    client.send("END\n".encode(TEXT_FORMAT))
+    client.send("!END".encode(TEXT_FORMAT))
     print(f"[INFO] Finished sending file '{archive_name}' to {receiver}.")
 
 def receive_file(total_chunks, filename):
@@ -78,7 +78,7 @@ def receive_file(total_chunks, filename):
     received_chunks = {}
     while True:
         package = client.recv(TAMANHO_BUFFER).decode(TEXT_FORMAT)
-        if package == "END\n":
+        if package == "!END":
             print("[INFO] File transfer completed.")
             break
         
@@ -100,7 +100,7 @@ def receive_file(total_chunks, filename):
         print(f"[INFO] Received chunk {id_chunk} successfully.")
 
     if len(received_chunks) == total_chunks:
-    print("Todos os chunks recebidos. Pronto para remontar.")
+        print("Todos os chunks recebidos. Pronto para remontar.")
 
     with open(f"{PASTA_SHARED}/{filename}", "wb") as f:
             for i in range(total_chunks):
@@ -109,9 +109,15 @@ def receive_file(total_chunks, filename):
 def start():
     while True:
         cmd = input("Enter command: ")
-        if cmd == "!DISCONNECT":
+        if cmd == "!END":
             print("[INFO] Ending connection.")
-            client.send("END\n".encode(TEXT_FORMAT))
+            msg = "!END"
+            msg.encode(TEXT_FORMAT)
+            msg_lenght = len(msg)
+            send_lenght = str(msg_lenght).encode(TEXT_FORMAT)
+            send_lenght += b' ' * (64 - len(send_lenght))
+            client.send(send_lenght)
+            client.send("!END".encode(TEXT_FORMAT))
             break
         if cmd.startswith("SEND"):
             cmd_parts = cmd.split(" ")
@@ -124,7 +130,7 @@ def start():
             filename = cmd_parts[2]
             receive_file(total_chunks, filename)
         else:
-            print("[ERROR] Unknown command. Use 'SEND <filename> TO <receiver>' to send a file or '!DISCONNECT' to exit.")
+            print("[ERROR] Unknown command. Use 'SEND <filename> TO <receiver>' to send a file or '!END' to exit.")
 
 def startConnection():
     try:
@@ -133,12 +139,12 @@ def startConnection():
         thread = threading.Thread(target=start)
         thread.start()
         print(f"[CONNECTED] Connected to server at {HOST_SERVIDOR}:{PORTA_SERVIDOR}")
-        print("To end the connection, type 'END\n'")
+        print("To end the connection, type '!END'")
         while True:
             msg = client.recv(64).decode(TEXT_FORMAT)
             if msg.startswith("[INFO]") or msg.startswith("[ERROR]"):
                 print(msg)
-            elif msg.startswith("END\n"):
+            elif msg.startswith("!END"):
                 client.close()
                 break
     except Exception as e:
@@ -146,9 +152,10 @@ def startConnection():
         return False
     return True
 
-package = {
-    "id_chunk": id_chunk
-    "file_chunk": file_chunk,
-    chunk_hash: chunk_hash,
-    }
+# package = {
+#     "id_chunk": id_chunk
+#     "file_chunk": file_chunk,
+#     chunk_hash: chunk_hash,
+#     }
 
+startConnection()

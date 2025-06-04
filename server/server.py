@@ -19,13 +19,15 @@ server.listen(5)
 
 print(f"[LISTENING] Listening on : {HOST_SERVIDOR}:{PORTA_SERVIDOR}")
 
+'''
 def broadcast(message):
     for client in clients:
         try:
             client.send(message.encode('utf-8'))
         except:
             # Se der erro (cliente desconectado), remove da lista
-            client.remove(client)
+            del clients[client]
+'''
 
 def treat_message(msg):
     msg = msg.strip(" ")
@@ -59,7 +61,7 @@ def receive_file(sender):
     print(f"[INFO] Waiting for file chunks from {sender}...")
     while True:
         package = client.recv(TAMANHO_BUFFER).decode(TEXT_FORMAT)
-        if package == "END\n":
+        if package == "!END":
             print("[INFO] File transfer completed.")
             break
         
@@ -82,11 +84,11 @@ def receive_file(sender):
 
 def handle_client(client_socket, client_address):
     username = client_socket.recv(64).decode(TEXT_FORMAT)
-    username = username.strip(" ")[0]
+    username = username.strip(" ")
     clients[username] = [client_socket, client_address]
     msg_connected = f"[INFO] {username} has joined the server."
     print(msg_connected)
-    broadcast(msg_connected)
+    # broadcast(msg_connected)
 
     connected = True
 
@@ -95,10 +97,10 @@ def handle_client(client_socket, client_address):
         msg_size = int(msg_size)
         if msg_size:
             msg = client_socket.recv(int(msg_size)).decode(TEXT_FORMAT)
-            if msg == "END\n":
+            if msg == "!END":
                 print(f"[INFO] {username} has left the server.")
-                broadcast(f"[INFO] {username} has left the server.")
-                client_socket.send("END\n".encode(TEXT_FORMAT))
+                # broadcast(f"[INFO] {username} has left the server.")
+                client_socket.send("!END".encode(TEXT_FORMAT))
                 del clients[username]
                 client_socket.close()
                 connected = False
@@ -112,7 +114,7 @@ def handle_client(client_socket, client_address):
                 receiving = True
                 while receiving:
                     package = client_socket.recv(TAMANHO_BUFFER).decode(TEXT_FORMAT)
-                    if package != "END\n":
+                    if package != "!END":
                         id_chunk, file_chunk, chunk_hash = treat_package(package)
                         if packageIsOk(file_chunk, chunk_hash):
                             receiver_socket.send(package)
@@ -120,8 +122,8 @@ def handle_client(client_socket, client_address):
                             client_socket.send(msg_chunck_ack.encode(TEXT_FORMAT))
                     else:
                         print(f"[INFO] {sender} finished sending {file} to {receiver}")
-                        receiver_socket.send("END\n".encode(TEXT_FORMAT))
-                        client_socket.send("END\n".encode(TEXT_FORMAT))
+                        receiver_socket.send("!END".encode(TEXT_FORMAT))
+                        client_socket.send("!END".encode(TEXT_FORMAT))
                         receiving = False
             else:
                 print(f"[ERROR] {receiver} not found. File not sent.")
@@ -133,7 +135,7 @@ def start():
         client_socket, client_address = server.accept()
         thread = threading.Thread(target=handle_client, args=(client_socket, client_address))
         thread.start()
-        print(f"[NEW CONNECTION ESTABLISHED] Active connections: {threading.activeCount() - 1}")
+        print(f"[NEW CONNECTION ESTABLISHED] Active connections: {threading.active_count() - 1}")
 
 start()
 
